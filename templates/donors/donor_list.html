@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}Donors - DMS{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Donors</h2>
+    <a href="{% url 'donor-create' %}" class="btn btn-primary">Add Donor</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <!-- Search Form -->
+        <form method="get" class="mb-4">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" name="search" class="form-control" 
+                           placeholder="Search donors..." value="{{ request.GET.search }}">
+                </div>
+                <div class="col-md-3">
+                    <select name="contact_method" class="form-select">
+                        <option value="">All Contact Methods</option>
+                        <option value="email" {% if request.GET.contact_method == 'email' %}selected{% endif %}>Email</option>
+                        <option value="phone" {% if request.GET.contact_method == 'phone' %}selected{% endif %}>Phone</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-secondary">Filter</button>
+                </div>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Total Donations</th>
+                        <th>Last Donation</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for donor in donors %}
+                    <tr>
+                        <td>{{ donor.name }}</td>
+                        <td>{{ donor.email }}</td>
+                        <td>{{ donor.phone }}</td>
+                        <td>${{ donor.total_donations|floatformat:2 }}</td>
+                        <td>
+                            {% if donor.donation_set.exists %}
+                                {{ donor.donation_set.first.donation_date|date:"M d, Y" }}
+                            {% else %}
+                                No donations yet
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'donor-detail' donor.pk %}" class="btn btn-sm btn-info">View</a>
+                            <a href="{% url 'donor-update' donor.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center">No donors found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% include 'includes/pagination.html' %}
+    </div>
+</div>
+{% endblock %}

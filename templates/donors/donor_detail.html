@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ donor.name }} - DMS{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>{{ donor.name }}</h2>
+                <a href="{% url 'donor-update' donor.pk %}" class="btn btn-warning">Edit Donor</a>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h4>Donor Details</h4>
+                    <p><strong>Email:</strong> {{ donor.email }}</p>
+                    <p><strong>Phone:</strong> {{ donor.phone }}</p>
+                    <p><strong>Address:</strong> {{ donor.address }}</p>
+                </div>
+                <div class="col-md-6">
+                    <h4>Donation Summary</h4>
+                    <p><strong>Total Donated:</strong> ${{ total_donated|floatformat:2|intcomma }}</p>
+                    <p><strong>Number of Donations:</strong> {{ donation_count }}</p>
+                    <p><strong>Average Donation:</strong> ${{ average_donation|floatformat:2|intcomma }}</p>
+                </div>
+            </div>
+
+            <h4>Donation History</h4>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Event</th>
+                        <th>Amount</th>
+                        <th>Payment Method</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for donation in donor.donation_set.all %}
+                    <tr>
+                        <td>{{ donation.donation_date|date:"M d, Y" }}</td>
+                        <td>
+                            {% if donation.event %}
+                            <a href="{% url 'event-detail' donation.event.pk %}">{{ donation.event.name }}</a>
+                            {% else %}
+                            General Donation
+                            {% endif %}
+                        </td>
+                        <td>${{ donation.amount|floatformat:2 }}</td>
+                        <td>{{ donation.get_payment_method_display }}</td>
+                        <td>
+                            <a href="{% url 'generate-receipt' donation.id %}" 
+                               class="btn btn-sm btn-secondary">Receipt</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center">No donations recorded yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

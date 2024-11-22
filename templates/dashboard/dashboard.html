@@ -1,0 +1,305 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Dashboard - DMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        transition: transform 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Dashboard</h1>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Total Donations</h6>
+                    <h3 class="mb-0">${{ total_donations|floatformat:2|intcomma }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-success text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Total Donors</h6>
+                    <h3 class="mb-0">{{ donation_statistics.total_donors|intcomma }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-info text-white">
+                <div class="card-body">
+                    <h6 class="card-title">Average Donation</h6>
+                    <h3 class="mb-0">${{ donation_statistics.avg_donation|floatformat:2|intcomma }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card bg-warning text-white">
+                <div class="card-body">
+                    <h6 class="card-title">This Month</h6>
+                    <h3 class="mb-0">${{ donation_statistics.this_month|floatformat:2|intcomma }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Charts Row 1 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Donation Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="donationDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Payment Methods</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="paymentMethodsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Donors and Recent Events -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Top Donors</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for donor in top_donors %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ donor.name }}
+                            <span class="badge bg-primary rounded-pill">
+                                ${{ donor.total_donated|floatformat:2|intcomma }}
+                            </span>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted">No donors yet</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recent Events</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for event in recent_events %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ event.name }}</h6>
+                                <small>{{ event.date|date:"M d, Y" }}</small>
+                            </div>
+                            <p class="mb-1">
+                                Raised: ${{ event.total_raised|default:0|floatformat:2|intcomma }}
+                                <small class="text-muted">({{ event.donor_count }} donors)</small>
+                            </p>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted">No events yet</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weekly Trends Chart -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Weekly Donation Trends</h5>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="weeklyTrendsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Trends Chart -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Monthly Donation Trends</h5>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="monthlyTrendsChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Donation Distribution Chart
+    new Chart(document.getElementById('donationDistributionChart'), {
+        type: 'pie',
+        data: {
+            labels: {{ donation_categories|safe }},
+            datasets: [{
+                data: {{ donation_amounts|safe }},
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 206, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)',
+                ],
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                }
+            }
+        }
+    });
+
+    // Payment Methods Chart
+    new Chart(document.getElementById('paymentMethodsChart'), {
+        type: 'doughnut',
+        data: {
+            labels: {{ payment_methods|safe }},
+            datasets: [{
+                data: {{ payment_counts|safe }},
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 206, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(255, 99, 132, 0.8)',
+                ],
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                }
+            }
+        }
+    });
+
+    // Weekly Trends Chart
+    new Chart(document.getElementById('weeklyTrendsChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ weekly_labels|safe }},
+            datasets: [{
+                label: 'Amount ($)',
+                data: {{ weekly_amounts|safe }},
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1,
+                yAxisID: 'y'
+            }, {
+                label: 'Number of Donations',
+                data: {{ weekly_counts|safe }},
+                type: 'line',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 2,
+                fill: false,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    beginAtZero: true,
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                }
+            }
+        }
+    });
+
+    // Monthly Trends Chart (existing)
+    const trendsData = {{ monthly_trends|safe }};
+    const labels = trendsData.map(item => new Date(item.month).toLocaleDateString('default', { month: 'short', year: 'numeric' }));
+    const values = trendsData.map(item => item.total);
+
+    new Chart(document.getElementById('monthlyTrendsChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Monthly Donations',
+                data: values,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1,
+                fill: true,
+                backgroundColor: 'rgba(75, 192, 192, 0.2)'
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
